@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D18FD9892FF8E53D00225D47 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = D18FD9882FF8E53D00225D47 /* SQLite */; };
 		D18FD98E2FF8E5A400225D47 /* SQLPropertyMacros in Frameworks */ = {isa = PBXBuildFile; productRef = D18FD98D2FF8E5A400225D47 /* SQLPropertyMacros */; };
+		D1F83D7F2FF98F1D0010DBDD /* TestPlan.xctestplan in Resources */ = {isa = PBXBuildFile; fileRef = D1F83D7E2FF98F1D0010DBDD /* TestPlan.xctestplan */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,7 @@
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* PennyClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PennyClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D18FD9B42FF98AC900225D47 /* PennyClientTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyClientTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1F83D7E2FF98F1D0010DBDD /* TestPlan.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TestPlan.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -58,6 +60,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				D1F83D7E2FF98F1D0010DBDD /* TestPlan.xctestplan */,
 				000000000000000000000010 /* PennyClient */,
 				D18FD9B52FF98AC900225D47 /* PennyClientTests */,
 				000000000000000000000020 /* Products */,
@@ -166,6 +169,7 @@
 		000000000000000140000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				D1F83D7F2FF98F1D0010DBDD /* TestPlan.xctestplan in Resources */,
 			);
 		};
 		D18FD9B22FF98AC900225D47 /* Resources */ = {
