@@ -151,6 +151,15 @@ struct ContentView: View {
 private struct ChatMessageRow: View {
     let message: ChatMessage
 
+    private var messageText: AttributedString {
+        guard !message.isOutgoing else {
+            return AttributedString(message.content)
+        }
+
+        let markdownContent = message.content.doublingSingleNewlines()
+        return (try? AttributedString(markdown: markdownContent)) ?? AttributedString(markdownContent)
+    }
+
     var body: some View {
         HStack {
             if message.isOutgoing {
@@ -164,7 +173,7 @@ private struct ChatMessageRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text(message.content)
+                Text(messageText)
                     .font(.body)
                     .foregroundStyle(message.isOutgoing ? .white : .primary)
                     .padding(.horizontal, 12)
@@ -188,6 +197,29 @@ private struct ChatMessageRow: View {
                 Spacer(minLength: 48)
             }
         }
+    }
+}
+
+private extension String {
+    func doublingSingleNewlines() -> String {
+        let characters = Array(self)
+        var result = ""
+        result.reserveCapacity(count)
+
+        for index in characters.indices {
+            let character = characters[index]
+            guard character == "\n" else {
+                result.append(character)
+                continue
+            }
+
+            let previousIsNewline = index > characters.startIndex && characters[characters.index(before: index)] == "\n"
+            let nextIndex = characters.index(after: index)
+            let nextIsNewline = nextIndex < characters.endIndex && characters[nextIndex] == "\n"
+            result.append(previousIsNewline || nextIsNewline ? "\n" : "\n\n")
+        }
+
+        return result
     }
 }
 

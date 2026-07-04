@@ -25,6 +25,9 @@ final class PennyWebSocketClient {
     var isRegistered = false
     var isTyping = false
     var lastError: String?
+    
+    private let messageLimit = 3
+    private let maximumWebSocketMessageSize = 8 * 1024 * 1024
 
     init() {
         self.databaseService = .shared
@@ -73,6 +76,7 @@ final class PennyWebSocketClient {
 
         lastError = nil
         let task = urlSession.webSocketTask(with: authenticatedRequest())
+        task.maximumMessageSize = maximumWebSocketMessageSize
         webSocketTask = task
         task.resume()
 
@@ -87,7 +91,7 @@ final class PennyWebSocketClient {
         }
 
         sendRegistration()
-        send(.pullMessages(limit: 50))
+        send(.pullMessages(limit: messageLimit))
     }
 
     func reconnect() {
@@ -143,7 +147,8 @@ final class PennyWebSocketClient {
                 try handle(incomingMessage)
             } catch {
                 guard !Task.isCancelled else { return }
-                lastError = error.localizedDescription
+                lastError = "WebSocket receive failed: \(error.localizedDescription)"
+                print(lastError ?? error.localizedDescription)
                 isConnected = false
                 isRegistered = false
                 return
@@ -183,11 +188,11 @@ final class PennyWebSocketClient {
             isConnected = true
             isRegistered = true
             pendingCount = payload.pendingCount
-            send(.pullMessages(limit: 50))
+            send(.pullMessages(limit: messageLimit))
         case .outboxChanged(let payload):
             pendingCount = payload.pendingCount
             if payload.pendingCount > 0 {
-                send(.pullMessages(limit: 50))
+                send(.pullMessages(limit: messageLimit))
             }
         case .messages(let payload):
             receive(payload.messages)
@@ -221,7 +226,7 @@ final class PennyWebSocketClient {
         clearAppBadge()
 
         if pendingCount > 0 {
-            send(.pullMessages(limit: 50))
+            send(.pullMessages(limit: messageLimit))
         }
     }
 
