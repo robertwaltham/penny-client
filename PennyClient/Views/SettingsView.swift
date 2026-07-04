@@ -11,9 +11,9 @@ struct SettingsView: View {
     init(client: PennyWebSocketClient) {
         self.client = client
         let prefs = Prefs.shared
-        _webSocketURL = State(initialValue: prefs.webSocketURL)
-        _username = State(initialValue: prefs.username)
-        _password = State(initialValue: prefs.password)
+        _webSocketURL = State(initialValue: prefs.webSocketURL ?? "")
+        _username = State(initialValue: prefs.username ?? "")
+        _password = State(initialValue: prefs.password ?? "")
     }
 
     var body: some View {

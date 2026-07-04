@@ -6,9 +6,11 @@ final class Prefs {
     private let userDefaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let bundledSecrets: SecretsPlist?
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = .standard, bundle: Bundle = .main) {
         self.userDefaults = userDefaults
+        self.bundledSecrets = SecretsPlist.load(from: bundle)
     }
 
     func string(forKey key: Key) -> String? {
@@ -72,18 +74,18 @@ final class Prefs {
 }
 
 extension Prefs {
-    var webSocketURL: String {
-        get { string(forKey: .webSocketURL) ?? Secrets.webSocketURL }
+    var webSocketURL: String? {
+        get { string(forKey: .webSocketURL) ?? bundledSecrets?.webSocketURL }
         set { set(newValue, forKey: .webSocketURL) }
     }
 
-    var username: String {
-        get { string(forKey: .username) ?? Secrets.username }
+    var username: String? {
+        get { string(forKey: .username) ?? bundledSecrets?.username }
         set { set(newValue, forKey: .username) }
     }
 
-    var password: String {
-        get { string(forKey: .password) ?? Secrets.password }
+    var password: String? {
+        get { string(forKey: .password) ?? bundledSecrets?.password }
         set { set(newValue, forKey: .password) }
     }
 
@@ -108,4 +110,23 @@ extension Prefs.Key {
     static let webSocketURL = Self("connection.webSocketURL")
     static let username = Self("connection.username")
     static let password = Self("connection.password")
+}
+
+private struct SecretsPlist: Decodable {
+    let webSocketURL: String
+    let username: String
+    let password: String
+
+    static func load(from bundle: Bundle) -> Self? {
+        guard let url = bundle.url(forResource: "Secrets", withExtension: "plist") else {
+            return nil
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            return try PropertyListDecoder().decode(Self.self, from: data)
+        } catch {
+            return nil
+        }
+    }
 }

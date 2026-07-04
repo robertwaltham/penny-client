@@ -123,13 +123,19 @@ final class PennyWebSocketClient {
 
     private func authenticatedRequest() -> URLRequest? {
         let prefs = Prefs.shared
-        guard let url = URL(string: prefs.webSocketURL) else {
-            lastError = "Invalid WebSocket URL: \(prefs.webSocketURL)"
+        
+        guard let path = prefs.webSocketURL, let url = URL(string: path) else {
+            lastError = "Invalid WebSocket URL: \(prefs.webSocketURL ?? "none")"
+            return nil
+        }
+        
+        guard let username = prefs.username, let password = prefs.password else {
+            lastError = "Invalid Username or Password"
             return nil
         }
 
         var request = URLRequest(url: url)
-        let credentials = "\(prefs.username):\(prefs.password)"
+        let credentials = "\(username):\(password)"
         let encodedCredentials = Data(credentials.utf8).base64EncodedString()
         request.setValue("Basic \(encodedCredentials)", forHTTPHeaderField: "Authorization")
         return request

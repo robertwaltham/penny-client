@@ -62,5 +62,5 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # Local app secrets
-PennyClient/Secrets.swift
+PennyClient/Secrets.plist
 .DS_*
