@@ -16,6 +16,14 @@ struct ContentView: View {
     @State private var client = PennyWebSocketClient()
     @State private var draftMessage = ""
     @State private var isShowingConnectionError = false
+    @State private var composerHeight: CGFloat = 64
+    @State private var keyboardHeight: CGFloat = 0
+
+    private let keyboardComposerSpacing: CGFloat = -24
+
+    private var keyboardOffset: CGFloat {
+        keyboardHeight > 0 ? keyboardHeight + keyboardComposerSpacing : 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -31,9 +39,13 @@ struct ContentView: View {
                             if client.isTyping {
                                 TypingRow()
                             }
+
+                            Color.clear
+                                .frame(height: composerHeight + keyboardOffset + 12)
+                                .id(bottomAnchorID)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.top, 12)
                     }
                     .background(Color(.systemGroupedBackground))
                     .scrollDismissesKeyboard(.interactively)
@@ -48,9 +60,21 @@ struct ContentView: View {
                     .onChange(of: client.isTyping) { _, _ in
                         scrollToBottom(with: proxy)
                     }
+                    .onChange(of: keyboardHeight) { _, _ in
+                        scrollToBottom(with: proxy)
+                    }
                 }
 
+                
+            }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .overlay(alignment: .bottom) {
                 composer
+                    .offset(y: -keyboardOffset)
+                    .readHeight { height in
+                        guard height > 0 else { return }
+                        composerHeight = height
+                    }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -70,6 +94,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .alert("Connection Error", isPresented: $isShowingConnectionError, presenting: client.lastError) { _ in
                 Button("Reconnect") {
                     client.reconnect()
@@ -84,6 +109,12 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            updateKeyboardHeight(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardHeight = 0
         }
         .onDisappear {
             client.disconnect()
@@ -125,7 +156,7 @@ struct ContentView: View {
             Button(action: sendDraft) {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .frame(width: 38, height: 38)
+                    .frame(width: 32, height: 32)
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.circle)
@@ -158,16 +189,52 @@ struct ContentView: View {
         }
     }
 
-    private func scrollToBottom(with proxy: ScrollViewProxy, animated: Bool = true) {
-        guard let lastID = client.messages.last?.id else { return }
+    private func updateKeyboardHeight(from notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
 
+        let screenHeight = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.screen.bounds.height }
+            .first ?? keyboardFrame.maxY
+        let overlap = max(0, screenHeight - keyboardFrame.minY)
+        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
+
+        withAnimation(.easeOut(duration: duration)) {
+            keyboardHeight = overlap
+        }
+    }
+
+    private var bottomAnchorID: String {
+        "message-list-bottom"
+    }
+
+    private func scrollToBottom(with proxy: ScrollViewProxy, animated: Bool = true) {
         if animated {
             withAnimation(.easeOut(duration: 0.2)) {
-                proxy.scrollTo(lastID, anchor: .bottom)
+                proxy.scrollTo(bottomAnchorID, anchor: .bottom)
             }
         } else {
-            proxy.scrollTo(lastID, anchor: .bottom)
+            proxy.scrollTo(bottomAnchorID, anchor: .bottom)
         }
+    }
+}
+
+private struct HeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private extension View {
+    func readHeight(_ onChange: @escaping (CGFloat) -> Void) -> some View {
+        overlay {
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: HeightPreferenceKey.self, value: proxy.size.height)
+            }
+        }
+        .onPreferenceChange(HeightPreferenceKey.self, perform: onChange)
     }
 }
 
