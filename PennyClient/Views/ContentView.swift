@@ -15,12 +15,11 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var client = PennyWebSocketClient()
     @State private var draftMessage = ""
+    @State private var isShowingConnectionError = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                statusBar
-
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -37,6 +36,12 @@ struct ContentView: View {
                         .padding(.vertical, 12)
                     }
                     .background(Color(.systemGroupedBackground))
+                    .scrollDismissesKeyboard(.interactively)
+                    .onAppear {
+                        DispatchQueue.main.async {
+                            scrollToBottom(with: proxy, animated: false)
+                        }
+                    }
                     .onChange(of: client.messages.count) { _, _ in
                         scrollToBottom(with: proxy)
                     }
@@ -47,17 +52,31 @@ struct ContentView: View {
 
                 composer
             }
-            .navigationTitle("Penny")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        client.reconnect()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .accessibilityLabel("Reconnect")
+                ToolbarItem(placement: .principal) {
+                    titleBar
                 }
+
+                if client.lastError != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            isShowingConnectionError = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                        }
+                        .buttonStyle(.glass)
+                        .accessibilityLabel("Connection error")
+                    }
+                }
+            }
+            .alert("Connection Error", isPresented: $isShowingConnectionError, presenting: client.lastError) { _ in
+                Button("Reconnect") {
+                    client.reconnect()
+                }
+                Button("OK", role: .cancel) {}
+            } message: { errorMessage in
+                Text(errorMessage)
             }
         }
         .task {
@@ -71,51 +90,51 @@ struct ContentView: View {
         }
     }
 
-    private var statusBar: some View {
+    private var titleBar: some View {
         HStack(spacing: 8) {
+            Image("penny")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 24, height: 24)
+
+            Text("Penny")
+                .font(.headline)
+
             Circle()
                 .fill(client.connectionColor)
-                .frame(width: 10, height: 10)
-
-            Text(client.statusText)
-                .font(.subheadline.weight(.medium))
-
-            Spacer()
-
-            if client.pendingCount > 0 {
-                Text("\(client.pendingCount) pending")
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.16), in: Capsule())
-                    .foregroundStyle(.orange)
-            }
+                .frame(width: 9, height: 9)
+                .accessibilityLabel(client.statusText)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.background)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .combine)
     }
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField("Message Penny", text: $draftMessage, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField("Message", text: $draftMessage, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.body)
                 .lineLimit(1...5)
                 .submitLabel(.send)
                 .onSubmit(sendDraft)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .glassEffect(.regular, in: .capsule)
 
             Button(action: sendDraft) {
                 Image(systemName: "paperplane.fill")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .frame(width: 38, height: 38)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .buttonBorderShape(.circle)
             .disabled(draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !client.canSend)
             .accessibilityLabel("Send")
         }
-        .padding(12)
-        .background(.background)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.clear)
     }
 
     private func sendDraft() {
@@ -139,10 +158,14 @@ struct ContentView: View {
         }
     }
 
-    private func scrollToBottom(with proxy: ScrollViewProxy) {
+    private func scrollToBottom(with proxy: ScrollViewProxy, animated: Bool = true) {
         guard let lastID = client.messages.last?.id else { return }
 
-        withAnimation(.easeOut(duration: 0.2)) {
+        if animated {
+            withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(lastID, anchor: .bottom)
+            }
+        } else {
             proxy.scrollTo(lastID, anchor: .bottom)
         }
     }
@@ -151,13 +174,45 @@ struct ContentView: View {
 private struct ChatMessageRow: View {
     let message: ChatMessage
 
-    private var messageText: AttributedString {
-        guard !message.isOutgoing else {
-            return AttributedString(message.content)
-        }
+    private var markdownTextBlocks: [AttributedString] {
+        message.content
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line in
+                let text = line.isEmpty ? " " : String(line)
+                return (try? AttributedString(markdown: text)) ?? AttributedString(text)
+            }
+    }
 
-        let markdownContent = message.content.doublingSingleNewlines()
-        return (try? AttributedString(markdown: markdownContent)) ?? AttributedString(markdownContent)
+    @ViewBuilder
+    private var messageBubble: some View {
+        if message.isOutgoing {
+            Text(message.content)
+                .font(.body)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(markdownTextBlocks.indices, id: \.self) { index in
+                    Text(markdownTextBlocks[index])
+                        .lineLimit(nil)
+                        .font(.body)
+                }
+
+                ForEach(message.imageAttachments) { attachment in
+                    Image(uiImage: attachment.image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 260)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
     }
 
     var body: some View {
@@ -173,20 +228,7 @@ private struct ChatMessageRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text(messageText)
-                    .font(.body)
-                    .foregroundStyle(message.isOutgoing ? .white : .primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .background(message.isOutgoing ? Color.accentColor : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                ForEach(message.imageAttachments) { attachment in
-                    Image(uiImage: attachment.image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 260)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
+                messageBubble
 
                 Text(message.displayTime)
                     .font(.caption2)
@@ -197,29 +239,6 @@ private struct ChatMessageRow: View {
                 Spacer(minLength: 48)
             }
         }
-    }
-}
-
-private extension String {
-    func doublingSingleNewlines() -> String {
-        let characters = Array(self)
-        var result = ""
-        result.reserveCapacity(count)
-
-        for index in characters.indices {
-            let character = characters[index]
-            guard character == "\n" else {
-                result.append(character)
-                continue
-            }
-
-            let previousIsNewline = index > characters.startIndex && characters[characters.index(before: index)] == "\n"
-            let nextIndex = characters.index(after: index)
-            let nextIsNewline = nextIndex < characters.endIndex && characters[nextIndex] == "\n"
-            result.append(previousIsNewline || nextIsNewline ? "\n" : "\n\n")
-        }
-
-        return result
     }
 }
 
