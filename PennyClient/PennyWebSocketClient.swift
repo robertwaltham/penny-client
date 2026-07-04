@@ -3,6 +3,7 @@ import Observation
 import Security
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @MainActor
 @Observable
@@ -14,6 +15,7 @@ final class PennyWebSocketClient {
     private var heartbeatTask: Task<Void, Never>?
     private var notificationTokenTask: Task<Void, Never>?
     private var localMessageID = -1
+    private let databaseService: DatabaseService
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -23,6 +25,22 @@ final class PennyWebSocketClient {
     var isRegistered = false
     var isTyping = false
     var lastError: String?
+
+    init() {
+        self.databaseService = .shared
+        loadSavedMessages()
+    }
+
+    init(databaseService: DatabaseService) {
+        self.databaseService = databaseService
+        loadSavedMessages()
+    }
+
+    private func loadSavedMessages() {
+        databaseService.setup()
+        messages = databaseService.loadMessages().map(ChatMessage.init(model:))
+        localMessageID = min(-1, (messages.map(\.id).min() ?? 0) - 1)
+    }
 
     var canSend: Bool {
         isConnected && isRegistered
@@ -94,6 +112,7 @@ final class PennyWebSocketClient {
     func sendMessage(_ content: String) {
         let message = ChatMessage.local(id: nextLocalMessageID(), content: content)
         messages.append(message)
+        databaseService.save(message: MessageModel(message: message))
         send(.message(content: content))
     }
 
@@ -180,16 +199,38 @@ final class PennyWebSocketClient {
     }
 
     private func receive(_ incomingMessages: [ServerChatMessage]) {
+        let incomingIDs = incomingMessages.map(\.id)
+        if incomingIDs.isEmpty {
+            pendingCount = 0
+            return
+        }
+
         let existingIDs = Set(messages.compactMap(\.serverID))
         let newMessages = incomingMessages
             .filter { !existingIDs.contains($0.id) }
             .map(ChatMessage.remote)
 
-        guard !newMessages.isEmpty else { return }
+        if !newMessages.isEmpty {
+            messages.append(contentsOf: newMessages)
+            messages.sort { $0.createdAt < $1.createdAt }
+            newMessages.forEach { databaseService.save(message: MessageModel(message: $0)) }
+        }
 
-        messages.append(contentsOf: newMessages)
-        messages.sort { $0.createdAt < $1.createdAt }
-        send(.ackMessages(ids: newMessages.map(\.serverID).compactMap { $0 }))
+        send(.ackMessages(ids: incomingIDs))
+        pendingCount = max(0, pendingCount - incomingIDs.count)
+        clearAppBadge()
+
+        if pendingCount > 0 {
+            send(.pullMessages(limit: 50))
+        }
+    }
+
+    private func clearAppBadge() {
+        UNUserNotificationCenter.current().setBadgeCount(0) { error in
+            if let error {
+                print("Failed to clear badge count: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func send(_ outgoingMessage: ClientMessage) {
@@ -443,6 +484,7 @@ struct ChatMessage: Identifiable {
     let createdAt: Date
     let content: String
     let sourceHint: String?
+    let imageAttachmentDataURLs: [String]
     let imageAttachments: [ImageAttachment]
     let isOutgoing: Bool
 
@@ -450,13 +492,48 @@ struct ChatMessage: Identifiable {
         createdAt.formatted(date: .omitted, time: .shortened)
     }
 
+    init(
+        id: Int,
+        serverID: Int?,
+        createdAt: Date,
+        content: String,
+        sourceHint: String?,
+        imageAttachmentDataURLs: [String] = [],
+        imageAttachments: [ImageAttachment],
+        isOutgoing: Bool
+    ) {
+        self.id = id
+        self.serverID = serverID
+        self.createdAt = createdAt
+        self.content = content
+        self.sourceHint = sourceHint
+        self.imageAttachmentDataURLs = imageAttachmentDataURLs
+        self.imageAttachments = imageAttachments
+        self.isOutgoing = isOutgoing
+    }
+
+    init(model: MessageModel) {
+        id = model.id
+        serverID = model.serverID
+        createdAt = model.createdAt
+        content = model.content
+        sourceHint = model.sourceHint
+        imageAttachmentDataURLs = model.imageAttachmentDataURLs
+        imageAttachments = model.imageAttachmentDataURLs.compactMap { dataURL in
+            guard let data = DataURLDecoder.decode(dataURL), let image = UIImage(data: data) else { return nil }
+            return ImageAttachment(image: image)
+        }
+        isOutgoing = model.isOutgoing
+    }
+
     static func local(id: Int, content: String) -> ChatMessage {
         ChatMessage(id: id, serverID: nil, createdAt: .now, content: content, sourceHint: nil, imageAttachments: [], isOutgoing: true)
     }
 
     fileprivate static func remote(_ message: ServerChatMessage) -> ChatMessage {
+        let imageAttachmentDataURLs = message.attachments.compactMap(\.dataURL)
         let imageAttachments = message.attachments.compactMap(\.image).map(ImageAttachment.init(image:))
-        return ChatMessage(id: message.id, serverID: message.id, createdAt: message.createdAt, content: message.content, sourceHint: message.sourceHint, imageAttachments: imageAttachments, isOutgoing: false)
+        return ChatMessage(id: message.id, serverID: message.id, createdAt: message.createdAt, content: message.content, sourceHint: message.sourceHint, imageAttachmentDataURLs: imageAttachmentDataURLs, imageAttachments: imageAttachments, isOutgoing: false)
     }
 }
 
