@@ -11,14 +11,30 @@
 		D18FD98E2FF8E5A400225D47 /* SQLPropertyMacros in Frameworks */ = {isa = PBXBuildFile; productRef = D18FD98D2FF8E5A400225D47 /* SQLPropertyMacros */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		D18FD9B82FF98AC900225D47 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000100000000;
+			remoteInfo = PennyClient;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* PennyClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PennyClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D18FD9B42FF98AC900225D47 /* PennyClientTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyClientTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* PennyClient */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PennyClient;
+			sourceTree = "<group>";
+		};
+		D18FD9B52FF98AC900225D47 /* PennyClientTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PennyClientTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +47,11 @@
 				D18FD98E2FF8E5A400225D47 /* SQLPropertyMacros in Frameworks */,
 			);
 		};
+		D18FD9B12FF98AC900225D47 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +59,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* PennyClient */,
+				D18FD9B52FF98AC900225D47 /* PennyClientTests */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* PennyClient.app */,
+				D18FD9B42FF98AC900225D47 /* PennyClientTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -75,6 +98,27 @@
 			productReference = 000000000000000000000120 /* PennyClient.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D18FD9B32FF98AC900225D47 /* PennyClientTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D18FD9BA2FF98AC900225D47 /* Build configuration list for PBXNativeTarget "PennyClientTests" */;
+			buildPhases = (
+				D18FD9B02FF98AC900225D47 /* Sources */,
+				D18FD9B12FF98AC900225D47 /* Frameworks */,
+				D18FD9B22FF98AC900225D47 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D18FD9B92FF98AC900225D47 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D18FD9B52FF98AC900225D47 /* PennyClientTests */,
+			);
+			name = PennyClientTests;
+			productName = PennyClientTests;
+			productReference = D18FD9B42FF98AC900225D47 /* PennyClientTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,11 +126,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					D18FD9B32FF98AC900225D47 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 000000000000000100000000;
 					};
 				};
 			};
@@ -109,12 +157,18 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* PennyClient */,
+				D18FD9B32FF98AC900225D47 /* PennyClientTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		000000000000000140000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		D18FD9B22FF98AC900225D47 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -127,7 +181,20 @@
 			files = (
 			);
 		};
+		D18FD9B02FF98AC900225D47 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D18FD9B92FF98AC900225D47 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000100000000 /* PennyClient */;
+			targetProxy = D18FD9B82FF98AC900225D47 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "PennyClient" */ = {
@@ -376,6 +443,51 @@
 			};
 			name = Release;
 		};
+		D18FD9BB2FF98AC900225D47 /* Debug configuration for PBXNativeTarget "PennyClientTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P87URHZFZ4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leveltenpaladin.PennyClientTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PennyClient.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PennyClient";
+			};
+			name = Debug;
+		};
+		D18FD9BC2FF98AC900225D47 /* Release configuration for PBXNativeTarget "PennyClientTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P87URHZFZ4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leveltenpaladin.PennyClientTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PennyClient.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PennyClient";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -392,6 +504,14 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "PennyClient" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "PennyClient" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		D18FD9BA2FF98AC900225D47 /* Build configuration list for PBXNativeTarget "PennyClientTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D18FD9BB2FF98AC900225D47 /* Debug configuration for PBXNativeTarget "PennyClientTests" */,
+				D18FD9BC2FF98AC900225D47 /* Release configuration for PBXNativeTarget "PennyClientTests" */,
 			);
 			defaultConfigurationName = Release;
 		};

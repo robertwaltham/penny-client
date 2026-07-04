@@ -13,6 +13,10 @@ extension MessageView {
         var composerHeight: CGFloat = 64
         var keyboardHeight: CGFloat = 0
 
+        init(client: PennyWebSocketClient? = nil) {
+            self.client = client ?? PennyWebSocketClient()
+        }
+
         private let keyboardComposerSpacing: CGFloat = -24
 
         var keyboardOffset: CGFloat {

@@ -15,6 +15,7 @@ final class PennyWebSocketClient {
     private var notificationTokenTask: Task<Void, Never>?
     private var localMessageID = -1
     private let databaseService: DatabaseService
+    private let prefs: Prefs
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -30,11 +31,19 @@ final class PennyWebSocketClient {
 
     init() {
         self.databaseService = .shared
+        self.prefs = .shared
         loadSavedMessages()
     }
 
     init(databaseService: DatabaseService) {
         self.databaseService = databaseService
+        self.prefs = .shared
+        loadSavedMessages()
+    }
+
+    init(databaseService: DatabaseService, prefs: Prefs) {
+        self.databaseService = databaseService
+        self.prefs = prefs
         loadSavedMessages()
     }
 
@@ -74,7 +83,7 @@ final class PennyWebSocketClient {
         guard webSocketTask == nil else { return }
 
         lastError = nil
-        guard let request = authenticatedRequest() else { return }
+        guard let request = makeAuthenticatedRequest() else { return }
 
         let task = urlSession.webSocketTask(with: request)
         task.maximumMessageSize = maximumWebSocketMessageSize
@@ -121,9 +130,7 @@ final class PennyWebSocketClient {
         send(.message(content: content))
     }
 
-    private func authenticatedRequest() -> URLRequest? {
-        let prefs = Prefs.shared
-        
+    func makeAuthenticatedRequest() -> URLRequest? {
         guard let path = prefs.webSocketURL, let url = URL(string: path) else {
             lastError = "Invalid WebSocket URL: \(prefs.webSocketURL ?? "none")"
             return nil
