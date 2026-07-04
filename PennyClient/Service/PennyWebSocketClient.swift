@@ -8,7 +8,6 @@ import UserNotifications
 @MainActor
 @Observable
 final class PennyWebSocketClient {
-    private let url = URL(string: Secrets.webSocketURL)!
     private let urlSession = URLSession(configuration: .default)
     private var webSocketTask: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
@@ -75,7 +74,9 @@ final class PennyWebSocketClient {
         guard webSocketTask == nil else { return }
 
         lastError = nil
-        let task = urlSession.webSocketTask(with: authenticatedRequest())
+        guard let request = authenticatedRequest() else { return }
+
+        let task = urlSession.webSocketTask(with: request)
         task.maximumMessageSize = maximumWebSocketMessageSize
         webSocketTask = task
         task.resume()
@@ -120,9 +121,15 @@ final class PennyWebSocketClient {
         send(.message(content: content))
     }
 
-    private func authenticatedRequest() -> URLRequest {
+    private func authenticatedRequest() -> URLRequest? {
+        let prefs = Prefs.shared
+        guard let url = URL(string: prefs.webSocketURL) else {
+            lastError = "Invalid WebSocket URL: \(prefs.webSocketURL)"
+            return nil
+        }
+
         var request = URLRequest(url: url)
-        let credentials = "\(Secrets.username):\(Secrets.password)"
+        let credentials = "\(prefs.username):\(prefs.password)"
         let encodedCredentials = Data(credentials.utf8).base64EncodedString()
         request.setValue("Basic \(encodedCredentials)", forHTTPHeaderField: "Authorization")
         return request

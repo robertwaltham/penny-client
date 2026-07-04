@@ -70,15 +70,31 @@ struct MessageView: View {
                     titleBar
                 }
 
-                if viewModel.client.lastError != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            viewModel.isShowingConnectionError = true
-                        } label: {
-                            Image(systemName: "info.circle")
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 14) {
+                        if viewModel.client.lastError != nil {
+                            Button {
+                                viewModel.isShowingConnectionError = true
+                            } label: {
+                                Image(systemName: "info.circle")
+                                    .frame(width: 28, height: 28)
+                                    .contentShape(Circle())
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.primary)
+                            .accessibilityLabel("Connection error")
                         }
-                        .buttonStyle(.glass)
-                        .accessibilityLabel("Connection error")
+
+                        Button {
+                            viewModel.isShowingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .frame(width: 28, height: 28)
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.primary)
+                        .accessibilityLabel("Settings")
                     }
                 }
             }
@@ -90,6 +106,9 @@ struct MessageView: View {
                 Button("OK", role: .cancel) {}
             } message: { errorMessage in
                 Text(errorMessage)
+            }
+            .sheet(isPresented: $viewModel.isShowingSettings) {
+                SettingsView(client: viewModel.client)
             }
         }
         .task {

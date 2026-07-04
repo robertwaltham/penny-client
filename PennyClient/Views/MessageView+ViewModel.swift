@@ -9,6 +9,7 @@ extension MessageView {
         var client = PennyWebSocketClient()
         var draftMessage = ""
         var isShowingConnectionError = false
+        var isShowingSettings = false
         var composerHeight: CGFloat = 64
         var keyboardHeight: CGFloat = 0
 
