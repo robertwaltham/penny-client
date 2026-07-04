@@ -6,24 +6,14 @@ import UIKit
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MessageView()
         }
     }
 }
 
-struct ContentView: View {
+struct MessageView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var client = PennyWebSocketClient()
-    @State private var draftMessage = ""
-    @State private var isShowingConnectionError = false
-    @State private var composerHeight: CGFloat = 64
-    @State private var keyboardHeight: CGFloat = 0
-
-    private let keyboardComposerSpacing: CGFloat = -24
-
-    private var keyboardOffset: CGFloat {
-        keyboardHeight > 0 ? keyboardHeight + keyboardComposerSpacing : 0
-    }
+    @State private var viewModel = ViewModel()
 
     var body: some View {
         NavigationStack {
@@ -31,17 +21,17 @@ struct ContentView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            ForEach(client.messages) { message in
+                            ForEach(viewModel.client.messages) { message in
                                 ChatMessageRow(message: message)
                                     .id(message.id)
                             }
 
-                            if client.isTyping {
+                            if viewModel.client.isTyping {
                                 TypingRow()
                             }
 
                             Color.clear
-                                .frame(height: composerHeight + keyboardOffset + 12)
+                                .frame(height: viewModel.composerHeight + viewModel.keyboardOffset + 12)
                                 .id(bottomAnchorID)
                         }
                         .padding(.horizontal, 16)
@@ -54,26 +44,24 @@ struct ContentView: View {
                             scrollToBottom(with: proxy, animated: false)
                         }
                     }
-                    .onChange(of: client.messages.count) { _, _ in
+                    .onChange(of: viewModel.client.messages.count) { _, _ in
                         scrollToBottom(with: proxy)
                     }
-                    .onChange(of: client.isTyping) { _, _ in
+                    .onChange(of: viewModel.client.isTyping) { _, _ in
                         scrollToBottom(with: proxy)
                     }
-                    .onChange(of: keyboardHeight) { _, _ in
+                    .onChange(of: viewModel.keyboardHeight) { _, _ in
                         scrollToBottom(with: proxy)
                     }
                 }
-
-                
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .overlay(alignment: .bottom) {
                 composer
-                    .offset(y: -keyboardOffset)
+                    .offset(y: -viewModel.keyboardOffset)
                     .readHeight { height in
                         guard height > 0 else { return }
-                        composerHeight = height
+                        viewModel.composerHeight = height
                     }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -82,10 +70,10 @@ struct ContentView: View {
                     titleBar
                 }
 
-                if client.lastError != nil {
+                if viewModel.client.lastError != nil {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            isShowingConnectionError = true
+                            viewModel.isShowingConnectionError = true
                         } label: {
                             Image(systemName: "info.circle")
                         }
@@ -95,9 +83,9 @@ struct ContentView: View {
                 }
             }
             .ignoresSafeArea(.keyboard, edges: .bottom)
-            .alert("Connection Error", isPresented: $isShowingConnectionError, presenting: client.lastError) { _ in
+            .alert("Connection Error", isPresented: $viewModel.isShowingConnectionError, presenting: viewModel.client.lastError) { _ in
                 Button("Reconnect") {
-                    client.reconnect()
+                    viewModel.reconnect()
                 }
                 Button("OK", role: .cancel) {}
             } message: { errorMessage in
@@ -105,19 +93,19 @@ struct ContentView: View {
             }
         }
         .task {
-            await client.connect()
+            await viewModel.connect()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            handleScenePhaseChange(newPhase)
+            viewModel.handleScenePhaseChange(newPhase)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
-            updateKeyboardHeight(from: notification)
+            viewModel.updateKeyboardHeight(from: notification)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            keyboardHeight = 0
+            viewModel.keyboardHeight = 0
         }
         .onDisappear {
-            client.disconnect()
+            viewModel.disconnect()
         }
     }
 
@@ -132,9 +120,9 @@ struct ContentView: View {
                 .font(.headline)
 
             Circle()
-                .fill(client.connectionColor)
+                .fill(viewModel.client.connectionColor)
                 .frame(width: 9, height: 9)
-                .accessibilityLabel(client.statusText)
+                .accessibilityLabel(viewModel.client.statusText)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
@@ -143,64 +131,29 @@ struct ContentView: View {
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TextField("Message", text: $draftMessage, axis: .vertical)
+            TextField("Message", text: $viewModel.draftMessage, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.body)
                 .lineLimit(1...5)
                 .submitLabel(.send)
-                .onSubmit(sendDraft)
+                .onSubmit(viewModel.sendDraft)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 12)
                 .glassEffect(.regular, in: .capsule)
 
-            Button(action: sendDraft) {
+            Button(action: viewModel.sendDraft) {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.circle)
-            .disabled(draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !client.canSend)
+            .disabled(viewModel.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.client.canSend)
             .accessibilityLabel("Send")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(.clear)
-    }
-
-    private func sendDraft() {
-        let trimmedMessage = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedMessage.isEmpty else { return }
-
-        draftMessage = ""
-        client.sendMessage(trimmedMessage)
-    }
-
-    private func handleScenePhaseChange(_ phase: ScenePhase) {
-        switch phase {
-        case .active:
-            Task { await client.connect() }
-        case .background:
-            client.disconnect()
-        case .inactive:
-            break
-        @unknown default:
-            break
-        }
-    }
-
-    private func updateKeyboardHeight(from notification: Notification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
-
-        let screenHeight = UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.screen.bounds.height }
-            .first ?? keyboardFrame.maxY
-        let overlap = max(0, screenHeight - keyboardFrame.minY)
-        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
-
-        withAnimation(.easeOut(duration: duration)) {
-            keyboardHeight = overlap
-        }
     }
 
     private var bottomAnchorID: String {
@@ -331,5 +284,5 @@ private struct TypingRow: View {
 }
 
 #Preview {
-    ContentView()
+    MessageView()
 }
