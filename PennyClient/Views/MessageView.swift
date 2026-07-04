@@ -1,16 +1,6 @@
 import SwiftUI
 import UIKit
 
-@main struct MyApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    var body: some Scene {
-        WindowGroup {
-            MessageView()
-        }
-    }
-}
-
 struct MessageView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel = ViewModel()

@@ -2,11 +2,31 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
+@main struct MyApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
+    static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            if Self.isRunningTests {
+                Color.clear
+            } else {
+                MessageView()
+            }
+        }
+    }
+}
+
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        guard !MyApp.isRunningTests else { return true }
+
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.delegate = self
         logNotificationSettings(using: notificationCenter)

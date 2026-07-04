@@ -96,13 +96,13 @@ struct PennyWebSocketClientTests {
     }
 
     @Test func reportsInvalidWebSocketURL() {
-        let prefs = configuredPrefs(url: "not a url", username: "alice", password: "secret")
+        let prefs = configuredPrefs(url: nil, username: "alice", password: "secret")
         let client = PennyWebSocketClient(databaseService: configuredDatabase(), prefs: prefs)
 
         let request = client.makeAuthenticatedRequest()
 
         #expect(request == nil)
-        #expect(client.lastError == "Invalid WebSocket URL: not a url")
+        #expect(client.lastError == "Invalid WebSocket URL: none")
     }
 
     @Test func reportsMissingCredentials() {
@@ -200,7 +200,7 @@ private func makeUserDefaults() -> UserDefaults {
 
 @MainActor
 private func configuredPrefs(
-    url: String = "wss://example.test/penny/",
+    url: String? = "wss://example.test/penny/",
     username: String = "alice",
     password: String = "secret"
 ) -> Prefs {
